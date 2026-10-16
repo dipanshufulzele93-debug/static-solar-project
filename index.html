@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNIVERSE EXPLORER — Free-Fly 3D Astronomy Learning Experience</title>
+  <meta name="description" content="Interactive 3D Universe Exploration Simulator — from deep space galaxies to planetary surfaces, black holes, and spacecraft flight for Class 5-10 students.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #010308;
+      --panel-bg: rgba(6, 14, 28, 0.78);
+      --panel-border: rgba(0, 229, 255, 0.22);
+      --accent-cyan: #00e5ff;
+      --accent-gold: #ffb300;
+      --accent-magenta: #e040fb;
+      --accent-green: #00e676;
+      --accent-red: #ff5252;
+      --text-main: #f0f4f8;
+      --text-dim: #94a3b8;
+      --font-ui: 'Inter', sans-serif;
+      --font-hud: 'Orbitron', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      font-family: var(--font-ui);
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* GLASSMORPHISM UI LAYER */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* TOP HEADER */
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: linear-gradient(180deg, rgba(1, 3, 8, 0.92) 0%, rgba(1, 3, 8, 0) 100%);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .logo-badge {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--accent-cyan);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 14px var(--accent-cyan);
+      font-family: var(--font-hud);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--accent-cyan);
+      background: rgba(0, 229, 255, 0.1);
+    }
+
+    .logo-text {
+      font-family: var(--font-hud);
+      font-size: 16px;
+      letter-spacing: 2px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #ffffff, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* MAIN TOP NAVIGATION BAR */
+    .nav-bar-container {
+      display: flex;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      padding: 3px 6px;
+      backdrop-filter: blur(16px);
+      gap: 2px;
+      overflow-x: auto;
+      max-width: calc(100vw - 520px);
+    }
+
+    .nav-btn {
+      padding: 6px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 18px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .nav-btn.active {
+      background: var(--accent-cyan);
+      color: #010308;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.45);
+      font-weight: 700;
+    }
+
+    /* SEARCH BAR */
+    .search-container {
+      position: relative;
+      width: 230px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 7px 12px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      backdrop-filter: blur(16px);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+    }
+
+    .search-results {
+      position: absolute;
+      top: 38px;
+      left: 0;
+      width: 100%;
+      max-height: 280px;
+      overflow-y: auto;
+      background: rgba(4, 10, 22, 0.95);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      backdrop-filter: blur(20px);
+      z-index: 100;
+    }
+
+    .search-item {
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 11px;
+      transition: background 0.15s;
+    }
+
+    .search-item:hover {
+      background: rgba(0, 229, 255, 0.15);
+    }
+
+    .search-item .s-name {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .search-item .s-type {
+      font-size: 10px;
+      color: var(--accent-cyan);
+    }
+
+    .search-item-empty {
+      padding: 12px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+
+    /* BREADCRUMB BAR */
+    .breadcrumb-bar {
+      position: absolute;
+      top: 60px;
+      left: 20px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      padding: 4px 14px;
+      font-family: var(--font-hud);
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 20;
+    }
+
+    .breadcrumb-bar .crumb-link {
+      cursor: pointer;
+      color: var(--accent-cyan);
+      transition: color 0.15s;
+    }
+
+    .breadcrumb-bar .crumb-link:hover {
+      color: #fff;
+      text-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    .breadcrumb-bar .crumb-active {
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    /* GALACTIC LOCATOR HUD STRIP */
+    .galactic-hud-strip {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      padding: 4px 14px;
+      font-family: var(--font-hud);
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 20;
+    }
+
+    .galactic-hud-strip span strong {
+      color: var(--accent-cyan);
+    }
+
+    /* FLIGHT KEYBOARD HELPER NOTIFICATION */
+    .flight-helper-banner {
+      position: absolute;
+      top: 92px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(3, 10, 22, 0.85);
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 11px;
+      color: #cbd5e1;
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 15;
+      pointer-events: auto;
+    }
+
+    .flight-helper-banner kbd {
+      background: rgba(0, 229, 255, 0.18);
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--accent-cyan);
+      font-family: var(--font-hud);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    /* LEFT QUICK SIDEBAR */
+    .sidebar {
+      position: absolute;
+      top: 124px;
+      left: 20px;
+      width: 210px;
+      max-height: calc(100vh - 210px);
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      backdrop-filter: blur(16px);
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 20;
+    }
+
+    .sidebar-section-title {
+      font-family: var(--font-hud);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: var(--accent-cyan);
+      margin-top: 6px;
+      margin-bottom: 2px;
+      padding-left: 4px;
+    }
+
+    .sidebar-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    .sidebar-item:hover {
+      background: rgba(0, 229, 255, 0.12);
+      transform: translateX(3px);
+    }
+
+    .sidebar-item .item-name {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .sidebar-item .item-type {
+      font-size: 9px;
+      color: var(--text-dim);
+    }
+
+    /* RIGHT INFORMATION & LEARNING PANEL */
+    .info-panel {
+      position: absolute;
+      top: 92px;
+      right: 20px;
+      width: 380px;
+      max-height: calc(100vh - 180px);
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      z-index: 30;
+    }
+
+    .info-panel.hidden {
+      transform: translateX(450px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .info-panel.minimized .panel-collapsible {
+      display: none;
+    }
+
+    .info-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .info-title {
+      font-family: var(--font-hud);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .info-type {
+      font-size: 11px;
+      color: var(--accent-gold);
+      margin-top: 1px;
+    }
+
+    .panel-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .icon-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .info-badge-row {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .badge-real {
+      background: rgba(0, 229, 255, 0.15);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-vis {
+      background: rgba(255, 179, 0, 0.15);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      font-size: 8.5px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* CLASS 5-10 LEARNING CARD */
+    .learning-card {
+      background: rgba(0, 229, 255, 0.05);
+      border: 1px solid rgba(0, 229, 255, 0.18);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .learning-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-hud);
+      font-size: 10px;
+      color: var(--accent-cyan);
+      letter-spacing: 1px;
+    }
+
+    .learning-item {
+      font-size: 11.5px;
+      line-height: 1.45;
+      color: #e2e8f0;
+    }
+
+    .learning-item strong {
+      color: var(--accent-gold);
+    }
+
+    /* VISUAL LEARNING INTERACTIVE BUTTONS */
+    .visual-btn-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .v-btn {
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      color: #cbd5e1;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .v-btn:hover {
+      background: rgba(0, 229, 255, 0.2);
+      color: #fff;
+      border-color: var(--accent-cyan);
+    }
+
+    .v-btn.active {
+      background: var(--accent-cyan);
+      color: #010308;
+      border-color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    /* VISUAL LEARNING DISPLAY CONTAINER */
+    .visual-learning-container {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px dashed rgba(0, 229, 255, 0.25);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11px;
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .visual-learning-container.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* QUICK QUIZ WIDGET */
+    .quiz-box {
+      background: linear-gradient(135deg, rgba(224, 64, 251, 0.1), rgba(0, 229, 255, 0.1));
+      border: 1px solid rgba(224, 64, 251, 0.35);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-hud);
+      font-size: 11px;
+      color: var(--accent-magenta);
+    }
+
+    .quiz-question {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.4;
+    }
+
+    .quiz-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .quiz-opt-btn {
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #cbd5e1;
+      font-size: 11px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .quiz-opt-btn:hover {
+      background: rgba(0, 229, 255, 0.15);
+      color: #fff;
+    }
+
+    .quiz-opt-btn.correct {
+      background: rgba(0, 230, 118, 0.25) !important;
+      border-color: var(--accent-green) !important;
+      color: #fff !important;
+      font-weight: 700;
+    }
+
+    .quiz-opt-btn.wrong {
+      background: rgba(255, 82, 82, 0.25) !important;
+      border-color: var(--accent-red) !important;
+      color: #fff !important;
+    }
+
+    .quiz-feedback {
+      font-size: 11px;
+      line-height: 1.4;
+      padding: 6px 8px;
+      border-radius: 6px;
+      display: none;
+    }
+
+    .quiz-feedback.show {
+      display: block;
+    }
+
+    .quiz-feedback.success {
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid var(--accent-green);
+      color: #c8e6c9;
+    }
+
+    .quiz-feedback.failure {
+      background: rgba(255, 82, 82, 0.15);
+      border: 1px solid var(--accent-red);
+      color: #ffcdd2;
+    }
+
+    .quiz-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    /* STATS GRID */
+    .info-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 5px 7px;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-val {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      margin-top: 1px;
+      word-break: break-word;
+    }
+
+    /* ACTION BUTTONS */
+    .action-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 8px 10px;
+      background: linear-gradient(90deg, #00b4d8, var(--accent-cyan));
+      border: none;
+      border-radius: 8px;
+      color: #010308;
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 11px;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .action-btn:hover {
+      box-shadow: 0 0 18px rgba(0, 229, 255, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .action-btn.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--panel-border);
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .action-btn.secondary:hover {
+      background: rgba(0, 229, 255, 0.2);
+    }
+
+    /* BOTTOM CONTROLS TOOLBAR */
+    .bottom-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: linear-gradient(0deg, rgba(1, 3, 8, 0.92) 0%, rgba(1, 3, 8, 0) 100%);
+    }
+
+    .time-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 4px 10px;
+      backdrop-filter: blur(16px);
+    }
+
+    .time-label {
+      font-family: var(--font-hud);
+      font-size: 10px;
+      color: var(--accent-cyan);
+      min-width: 90px;
+    }
+
+    .ctrl-btn {
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(0, 229, 255, 0.2);
+    }
+
+    .ctrl-btn.active {
+      background: var(--accent-gold);
+      color: #010308;
+      border-color: var(--accent-gold);
+    }
+
+    .cam-mode-btn {
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .cam-mode-btn:hover {
+      background: rgba(0, 229, 255, 0.2);
+    }
+
+    .cam-mode-btn.active {
+      background: var(--accent-cyan);
+      color: #010308;
+      font-weight: 700;
+      border-color: var(--accent-cyan);
+    }
+
+    .quick-toggles {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quality-dropdown {
+      padding: 4px 8px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 10.5px;
+      outline: none;
+      backdrop-filter: blur(16px);
+    }
+
+    /* SPACECRAFT FLIGHT HUD OVERLAY */
+    #flight-hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    #flight-hud.hidden {
+      display: none;
+    }
+
+    .hud-crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 40px;
+      height: 40px;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(0, 229, 255, 0.5);
+      border-radius: 50%;
+    }
+
+    .hud-crosshair::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: var(--accent-cyan);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+    }
+
+    .hud-telemetry-left {
+      position: absolute;
+      left: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 18, 32, 0.65);
+      border-left: 3px solid var(--accent-cyan);
+      padding: 8px 12px;
+      font-family: var(--font-hud);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-telemetry-right {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 18, 32, 0.65);
+      border-right: 3px solid var(--accent-cyan);
+      padding: 8px 12px;
+      font-family: var(--font-hud);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: right;
+    }
+
+    .hud-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .hud-lbl {
+      font-size: 8.5px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    .hud-target-bracket {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border: 2px dashed var(--accent-gold);
+      border-radius: 6px;
+      pointer-events: none;
+      display: none;
+    }
+
+    .hud-target-dist {
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-hud);
+      font-size: 9px;
+      color: var(--accent-gold);
+      white-space: nowrap;
+    }
+
+    /* HOVER TOOLTIP */
+    #hover-tooltip {
+      position: absolute;
+      display: none;
+      padding: 4px 8px;
+      background: rgba(1, 4, 12, 0.9);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 6px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #fff;
+      pointer-events: none;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    /* DISCOVERY TOASTS */
+    #toast-container {
+      position: absolute;
+      bottom: 70px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 40;
+    }
+
+    .discovery-toast {
+      background: rgba(4, 14, 28, 0.94);
+      border-left: 4px solid var(--accent-gold);
+      border-radius: 8px;
+      padding: 8px 12px;
+      width: 250px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      animation: slideIn 0.35s ease;
+      transition: opacity 0.5s;
+    }
+
+    .discovery-toast.fade-out {
+      opacity: 0;
+    }
+
+    .toast-header {
+      font-family: var(--font-hud);
+      font-size: 8.5px;
+      color: var(--accent-gold);
+      letter-spacing: 1px;
+    }
+
+    .toast-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 1px;
+    }
+
+    .toast-body {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(50px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* CATALOG BUTTON */
+    .catalog-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(224, 64, 251, 0.15));
+      border: 1px solid var(--accent-cyan);
+      border-radius: 20px;
+      color: #fff;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.25s ease;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+    }
+
+    .catalog-btn:hover {
+      background: linear-gradient(135deg, rgba(0, 229, 255, 0.35), rgba(224, 64, 251, 0.35));
+      box-shadow: 0 0 18px rgba(0, 229, 255, 0.5);
+      transform: translateY(-1px);
+    }
+
+    /* CATALOG MODAL */
+    #catalog-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(1, 3, 8, 0.85);
+      backdrop-filter: blur(24px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s ease;
+    }
+
+    #catalog-modal.hidden {
+      display: none;
+    }
+
+    .catalog-window {
+      width: 90%;
+      max-width: 1100px;
+      height: 85vh;
+      background: rgba(6, 14, 28, 0.95);
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 40px rgba(0, 229, 255, 0.15);
+      overflow: hidden;
+    }
+
+    .catalog-header {
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+      background: rgba(1, 4, 12, 0.5);
+    }
+
+    .catalog-title-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .catalog-title {
+      font-family: var(--font-hud);
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #fff, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1.5px;
+    }
+
+    .catalog-subtitle {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .catalog-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .catalog-search-input {
+      width: 220px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      color: #fff;
+      font-size: 11px;
+      outline: none;
+    }
+
+    .catalog-search-input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .catalog-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 8px 20px;
+      overflow-x: auto;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .catalog-tab-btn {
+      padding: 5px 12px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      color: var(--text-dim);
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .catalog-tab-btn:hover {
+      color: #fff;
+      border-color: var(--accent-cyan);
+    }
+
+    .catalog-tab-btn.active {
+      background: var(--accent-cyan);
+      color: #010308;
+      border-color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    .catalog-tab-btn span {
+      font-size: 9px;
+      opacity: 0.8;
+    }
+
+    .catalog-grid {
+      flex: 1;
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      align-content: start;
+    }
+
+    .catalog-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .catalog-card:hover {
+      background: rgba(0, 229, 255, 0.06);
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 18px rgba(0, 229, 255, 0.12);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .card-title {
+      font-family: var(--font-hud);
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .card-badge {
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(0, 229, 255, 0.2);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      white-space: nowrap;
+    }
+
+    .card-type {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    .card-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 10px;
+      color: #cbd5e1;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 6px;
+      border-radius: 6px;
+    }
+
+    .card-prop span {
+      color: var(--text-dim);
+    }
+
+    .card-fly-btn {
+      margin-top: auto;
+      padding: 6px;
+      background: linear-gradient(90deg, #00b4d8, var(--accent-cyan));
+      border: none;
+      border-radius: 6px;
+      color: #010308;
+      font-family: var(--font-ui);
+      font-weight: 700;
+      font-size: 10.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .card-fly-btn:hover {
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.25); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 229, 255, 0.5); }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- Astronomy Catalog Modal Overlay -->
+  <div id="catalog-modal" class="hidden">
+    <div class="catalog-window">
+      <div class="catalog-header">
+        <div class="catalog-title-box">
+          <div class="logo-badge">◈</div>
+          <div>
+            <div class="catalog-title">ASTRONOMICAL DATABASE & CATALOG</div>
+            <div class="catalog-subtitle">Authoritative NASA, JPL Horizons, ESA Gaia, SIMBAD, and Exoplanet Archive scientific repository</div>
+          </div>
+        </div>
+        <div class="catalog-controls">
+          <input type="text" id="catalog-search-input" class="catalog-search-input" placeholder="Search catalogue..." autocomplete="off">
+          <button id="catalog-close-btn" class="icon-btn" style="font-size:20px;">&times;</button>
+        </div>
+      </div>
+
+      <div class="catalog-tabs">
+        <button class="catalog-tab-btn active" data-category="all">All <span id="count-all"></span></button>
+        <button class="catalog-tab-btn" data-category="stars">Stars <span id="count-stars"></span></button>
+        <button class="catalog-tab-btn" data-category="exoplanets">Exoplanets <span id="count-exoplanets"></span></button>
+        <button class="catalog-tab-btn" data-category="planets">Solar System <span id="count-planets"></span></button>
+        <button class="catalog-tab-btn" data-category="asteroids">Asteroids & Dwarfs <span id="count-asteroids"></span></button>
+        <button class="catalog-tab-btn" data-category="comets">Comets <span id="count-comets"></span></button>
+        <button class="catalog-tab-btn" data-category="clusters">Star Clusters <span id="count-clusters"></span></button>
+        <button class="catalog-tab-btn" data-category="galaxies">Galaxies <span id="count-galaxies"></span></button>
+        <button class="catalog-tab-btn" data-category="black_holes">Black Holes <span id="count-blackholes"></span></button>
+        <button class="catalog-tab-btn" data-category="nebulae">Nebulae <span id="count-nebulae"></span></button>
+        <button class="catalog-tab-btn" data-category="spacecraft">Spacecraft <span id="count-spacecraft"></span></button>
+      </div>
+
+      <div id="catalog-grid" class="catalog-grid"></div>
+    </div>
+  </div>
+
+  <!-- Spacecraft Flight HUD -->
+  <div id="flight-hud" class="hidden">
+    <div class="hud-crosshair"></div>
+    <div class="hud-telemetry-left">
+      <div class="hud-lbl">VELOCITY</div>
+      <div class="hud-val" id="hud-speed-val">0 km/s</div>
+      <div class="hud-lbl" style="margin-top:4px;">PROPULSION</div>
+      <div class="hud-val" id="hud-warp-val">Sublight</div>
+    </div>
+    <div class="hud-telemetry-right">
+      <div class="hud-lbl">HEADING</div>
+      <div class="hud-val" id="hud-heading-val">000°</div>
+      <div class="hud-lbl" style="margin-top:4px;">ALTITUDE</div>
+      <div class="hud-val" id="hud-pitch-val">0.0 AU</div>
+    </div>
+    <div id="hud-target-bracket" class="hud-target-bracket">
+      <span id="hud-target-dist" class="hud-target-dist">---</span>
+    </div>
+  </div>
+
+  <!-- Primary Interactive UI Layer -->
+  <div class="ui-layer">
+    <!-- Top Bar -->
+    <header class="top-header interactive">
+      <div class="logo-container" id="brand-logo">
+        <div class="logo-badge">◈</div>
+        <div class="logo-text">UNIVERSE EXPLORER</div>
+      </div>
+
+      <!-- Main Scale & Mode Navigation -->
+      <nav class="nav-bar-container">
+        <button class="nav-btn" data-scale="MULTIVERSE">🌌 Multiverse</button>
+        <button class="nav-btn" data-scale="COSMIC_WEB">🕸️ Cosmic Web</button>
+        <button class="nav-btn" data-scale="UNIVERSE">🔭 Universe</button>
+        <button class="nav-btn" data-scale="GALAXIES">🌀 Galaxies</button>
+        <button class="nav-btn" data-scale="MILKY_WAY">✨ Milky Way</button>
+        <button class="nav-btn active" data-scale="SOLAR_SYSTEM">☀️ Solar System</button>
+        <button class="nav-btn" data-scale="PLANETS">🪐 Planets</button>
+        <button class="nav-btn" data-scale="HABITABILITY">💧 Habitability</button>
+        <button class="nav-btn" data-scale="BLACK_HOLES">🕳️ Black Holes</button>
+        <button class="nav-btn" data-scale="WORMHOLE" style="border: 1px dashed rgba(224, 64, 251, 0.6); color: #e040fb;">🌀 Wormhole (Hypo)</button>
+        <button class="nav-btn" data-scale="SPACECRAFT">🛰️ Spacecraft</button>
+        <button class="nav-btn" data-scale="LEARNING">🎓 Learning Mode</button>
+      </nav>
+
+      <!-- Search & Catalog Buttons -->
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button id="open-catalog-btn" class="catalog-btn">📚 Database</button>
+        
+        <div class="search-container">
+          <input type="text" id="search-input" class="search-input" placeholder="🔍 Search (Earth, Bennu, M87*)..." autocomplete="off">
+          <div id="search-results" class="search-results hidden"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Breadcrumb Navigation Bar -->
+    <div id="breadcrumb-bar" class="breadcrumb-bar interactive">
+      <span class="crumb-link" data-scale="UNIVERSE">UNIVERSE</span> &gt;
+      <span class="crumb-link" data-scale="MILKY_WAY">MILKY WAY</span> &gt;
+      <span class="crumb-active">SOLAR SYSTEM</span>
+    </div>
+
+    <!-- Galactic Locator HUD Strip -->
+    <div id="galactic-hud-strip" class="galactic-hud-strip">
+      <span>📍 <strong>YOU ARE HERE:</strong> Orion Spur, Milky Way</span>
+      <span>🌌 <strong>DIST TO CENTER:</strong> 26,670 ly</span>
+      <span id="target-dist-indicator">🎯 <strong>TARGET:</strong> None</span>
+    </div>
+
+    <!-- Flight Navigation Key Helper Banner -->
+    <div class="flight-helper-banner">
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Free Flight</span>
+      <span><kbd>Q</kbd><kbd>E</kbd> Down/Up</span>
+      <span><kbd>Shift</kbd> Warp Boost</span>
+      <span><kbd>Mouse Drag</kbd> Free Look</span>
+      <span><kbd>ESC</kbd> Cancel Fly-to</span>
+    </div>
+
+    <!-- Left Quick Navigation Sidebar -->
+    <aside class="sidebar interactive">
+      <div id="sidebar-objects-list"></div>
+    </aside>
+
+    <!-- Right Info & Learning Drawer -->
+    <section id="info-panel" class="info-panel interactive hidden">
+      <div class="info-header">
+        <div>
+          <div id="info-badge-row" class="info-badge-row"></div>
+          <h2 id="info-title" class="info-title">Earth</h2>
+          <div id="info-type" class="info-type">Terrestrial Planet</div>
+        </div>
+        <div class="panel-controls">
+          <button id="info-min-btn" class="icon-btn" title="Minimize / Expand">▼</button>
+          <button id="info-close-btn" class="icon-btn" title="Close">&times;</button>
+        </div>
+      </div>
+
+      <!-- LEVEL SWITCHER: Easy Explanation vs More Science -->
+      <div style="display:flex; gap:4px; margin-top:2px; background:rgba(0,0,0,0.35); padding:3px; border-radius:8px; border:1px solid rgba(0,229,255,0.18);">
+        <button id="level-btn-easy" class="level-tab-btn active" style="flex:1; padding:5px 8px; border:none; border-radius:6px; background:var(--accent-cyan); color:#010308; font-weight:700; font-size:10.5px; cursor:pointer; transition:all 0.2s;">🎒 Easy Explanation</button>
+        <button id="level-btn-science" class="level-tab-btn" style="flex:1; padding:5px 8px; border:none; border-radius:6px; background:transparent; color:var(--text-dim); font-weight:600; font-size:10.5px; cursor:pointer; transition:all 0.2s;">🔬 More Science</button>
+      </div>
+
+      <div class="panel-collapsible" style="display:flex; flex-direction:column; gap:10px;">
+        <!-- MODE 1: EASY EXPLANATION (Class 5–10 Teacher Structured Sequence) -->
+        <div id="easy-mode-content" style="display:flex; flex-direction:column; gap:8px;">
+          <!-- Progressive Teacher Learning Card -->
+          <div class="learning-card" id="learning-card">
+            <div class="learning-header">
+              <span>🎓 ASTRONOMY LEARNING (CLASS 5–10)</span>
+            </div>
+            
+            <div class="learning-item" id="learn-meet-item">
+              <strong style="color:var(--accent-cyan);">🙋‍♂️ Meet this object:</strong>
+              <span id="learn-meet-text">Earth is the vibrant blue home world where humanity and all known living things live!</span>
+            </div>
+
+            <div class="learning-item" id="learn-what-item">
+              <strong>❓ What is it?</strong>
+              <span id="learn-what-text">Earth is the third planet from the Sun and a rocky terrestrial world.</span>
+            </div>
+
+            <div class="learning-item" id="learn-size-item">
+              <strong>📏 How big is it?</strong>
+              <span id="learn-size-text">12,742 km wide — about 4 times wider than the Moon!</span>
+            </div>
+
+            <div class="learning-item" id="learn-where-item">
+              <strong>📍 Where is it?</strong>
+              <span id="learn-where-text">1 AU (149.6 million km) from the Sun in the Solar System.</span>
+            </div>
+
+            <div class="learning-item" id="learn-made-item">
+              <strong>🧱 What is it made of?</strong>
+              <span id="learn-made-text">A solid iron-nickel core, silicate rock mantle, and a thin crust covered in oceans.</span>
+            </div>
+
+            <div class="learning-item" id="learn-like-item">
+              <strong>🌡️ What is it like?</strong>
+              <span id="learn-like-text">Temperate with warm oceans, lush continents, and breathable air.</span>
+            </div>
+
+            <div class="learning-item" id="learn-water-item">
+              <strong>💧 Does it have water?</strong>
+              <span id="learn-water-text" style="color:#00e676; font-weight:600;">Abundant liquid surface oceans covering 71% of the globe!</span>
+            </div>
+
+            <div class="learning-item" id="learn-atmo-item">
+              <strong>💨 Does it have an atmosphere?</strong>
+              <span id="learn-atmo-text">78% Nitrogen, 21% Oxygen with an ozone layer shielding radiation.</span>
+            </div>
+
+            <div class="learning-item" id="learn-life-item">
+              <strong>🌱 Could life exist there?</strong>
+              <span id="learn-life-text" style="color:#00e676; font-weight:700;">CONFIRMED — Billions of species thrive here!</span>
+            </div>
+
+            <div class="learning-item" id="learn-special-item">
+              <strong>✨ What makes it special?</strong>
+              <span id="learn-special-text">It is the only world currently confirmed to harbor life in the universe.</span>
+            </div>
+
+            <div class="learning-item" id="learn-fact-item" style="background:rgba(255,179,0,0.08); padding:6px; border-radius:6px; border-left:3px solid var(--accent-gold);">
+              <strong style="color:var(--accent-gold);">💡 Did you know?</strong>
+              <span id="learn-fact-text">Earth travels around the Sun at 107,000 km/h (67,000 mph)!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODE 2: MORE SCIENCE (Deep Astrophysics & Planetary Science) -->
+        <div id="science-mode-content" style="display:none; flex-direction:column; gap:8px;">
+          <div class="learning-card" style="border-color:rgba(224,64,251,0.3); background:rgba(224,64,251,0.05);">
+            <div class="learning-header" style="color:var(--accent-magenta);">
+              <span>🔬 DEEP ASTROPHYSICS & RESEARCH DATA</span>
+            </div>
+            <div id="science-summary-text" style="font-size:11.5px; line-height:1.45; color:#cbd5e1;">
+              Orbital mechanics, chemical equilibrium, and thermodynamic metrics from observational space missions.
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Visual Learning Action Buttons -->
+        <div>
+          <div style="font-size:9.5px; color:var(--accent-cyan); font-weight:700; letter-spacing:1px; margin-bottom:4px; font-family:var(--font-hud);">
+            SHOW & DISCOVER:
+          </div>
+          <div class="visual-btn-grid">
+            <button class="v-btn" data-tab="why">🧠 WHY?</button>
+            <button class="v-btn" data-tab="how">🔬 HOW?</button>
+            <button class="v-btn" data-tab="what">🔭 WHAT?</button>
+            <button class="v-btn" data-tab="compare">⚖️ COMPARE</button>
+            <button class="v-btn" data-tab="scale">📏 SCALE</button>
+            <button class="v-btn" data-tab="evidence">🔍 EVIDENCE</button>
+            <button class="v-btn" data-tab="water">💧 WATER</button>
+            <button class="v-btn" data-tab="atmosphere">💨 ATMOSPHERE</button>
+            <button class="v-btn" data-tab="life">🌱 LIFE</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Visual Learning Container -->
+        <div id="visual-learning-container" class="visual-learning-container">
+          <div id="visual-learning-title" style="font-weight:700; color:var(--accent-gold); margin-bottom:4px;"></div>
+          <div id="visual-learning-content" style="line-height:1.45; color:#cbd5e1;"></div>
+        </div>
+
+        <!-- Quick Quiz Widget (🧠 QUICK QUIZ) -->
+        <div id="quiz-container" class="quiz-box">
+          <div class="quiz-header">
+            <span>🧠 QUICK QUIZ</span>
+            <span id="quiz-score-indicator" style="color:var(--accent-gold); font-weight:700;">Score: 0/0</span>
+          </div>
+          <div id="quiz-question-text" class="quiz-question">Loading question...</div>
+          <div id="quiz-options-list" class="quiz-options-list"></div>
+          <div id="quiz-feedback-box" class="quiz-feedback"></div>
+          <div class="quiz-footer">
+            <button id="quiz-retry-btn" class="v-btn" style="display:none;">🔄 Retry</button>
+            <button id="quiz-next-btn" class="v-btn" style="display:none; background:var(--accent-cyan); color:#000;">Next Question ➔</button>
+          </div>
+        </div>
+
+        <!-- Scientific Data Grid -->
+        <div>
+          <div style="font-size:9.5px; color:var(--text-dim); font-weight:700; letter-spacing:1px; margin-bottom:4px; font-family:var(--font-hud);">
+            SCIENTIFIC TELEMETRY & MEASUREMENTS:
+          </div>
+          <div id="info-stats-grid" class="info-stats-grid"></div>
+        </div>
+
+        <!-- Action Row -->
+        <div class="action-row">
+          <button id="fly-to-target-btn" class="action-btn">🚀 Fly To Object</button>
+          <button id="take-quiz-btn" class="action-btn secondary">🧠 Quick Quiz</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Controls Bar -->
+    <footer class="bottom-bar interactive">
+      <!-- Simulation Time Controls -->
+      <div class="time-controls">
+        <div id="sim-date-label" class="time-label">Sep 10, 2026</div>
+        <button id="sim-pause-btn" class="ctrl-btn">⏸ Pause</button>
+        <button id="sim-speed-btn" class="ctrl-btn">Speed: <span id="sim-speed-label">1× (Real)</span></button>
+      </div>
+
+      <!-- Camera Modes Selector -->
+      <div class="camera-modes-group" style="display:flex; align-items:center; gap:4px; background:var(--panel-bg); border:1px solid var(--panel-border); border-radius:24px; padding:3px 8px; backdrop-filter:blur(16px);">
+        <span style="font-family:var(--font-hud); font-size:9px; color:var(--accent-cyan); letter-spacing:0.5px; margin-right:2px;">CAM:</span>
+        <button class="cam-mode-btn active" data-cam-mode="FREE_EXPLORE" title="Free 6-DOF Movement">🌐 Free</button>
+        <button class="cam-mode-btn" data-cam-mode="ORBIT" title="Orbit selected object">🔄 Orbit</button>
+        <button class="cam-mode-btn" data-cam-mode="FOLLOW" title="Follow moving planet/craft">🛰️ Follow</button>
+        <button class="cam-mode-btn" data-cam-mode="PLANET" title="Close planet inspection">🪐 Planet</button>
+        <button class="cam-mode-btn" data-cam-mode="HOME" title="Reset to Solar System">🏠 Home</button>
+      </div>
+
+      <!-- Feature Toggles -->
+      <div class="quick-toggles">
+        <button id="toggle-flight-btn" class="ctrl-btn">🚀 Spacecraft Mode (F)</button>
+        <button id="toggle-orbits-btn" class="ctrl-btn active">Orbits</button>
+        <button id="toggle-sound-btn" class="ctrl-btn active">🔊 Audio On</button>
+        <select id="quality-select" class="quality-dropdown">
+          <option value="ultra" selected>Ultra Graphics</option>
+          <option value="high">High Graphics</option>
+          <option value="medium">Medium</option>
+          <option value="low">Performance</option>
+        </select>
+      </div>
+    </footer>
+  </div>
+
+  <div id="hover-tooltip"></div>
+  <div id="toast-container"></div>
+
+  <!-- Vite ES Module Entry Point -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
